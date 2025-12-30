@@ -119,7 +119,7 @@ class Game:
     def movePlayer(self, x, y):
         if self.y + y >= len(self.board):
             self.levelComplete()
-        if self.board[self.y + y][(self.x + x) % self.width] == " ":
+        elif self.board[self.y + y][(self.x + x) % self.width] == " ":
             self.x += x
             self.x %= self.width
             self.y += y
