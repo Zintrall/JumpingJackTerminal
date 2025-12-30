@@ -4,7 +4,6 @@ import select
 import sys
 import termios
 import time
-import tty
 
 fd = sys.stdin.fileno()
 old_term = termios.tcgetattr(fd)
@@ -53,6 +52,7 @@ class Game:
         self.arrayHolesBottom = arrayHolesBottom
         self.level = 0
         self.lastkeys = []
+        self.downtime = 16
         self.nextLevel()
 
     def nextLevel(self):
@@ -66,9 +66,27 @@ class Game:
         self.tickNum = 0
 
     def levelComplete(self):
-        if len(self.arrayHolesTop) > self.level:
+        if len(self.arrayHolesTop) > self.level + 1:
             self.level += 1
+            print(f"\033[{len(self.board) // 2 + 1}A", end="", flush=True)
+            print(
+                " " * (max(self.width - 11, 0) // 2)
+                + f"Level {self.level} Beaten"
+                + " " * ((max(self.width - 11, 0) // 2) + 1)
+            )
+            print("\n" * ((len(self.board) // 2) - 1))
+            time.sleep(3)
             self.nextLevel()
+        else:
+            print(f"\033[{len(self.board) // 2 + 1}A", end="", flush=True)
+            print(
+                " " * (max(self.width - 11, 0) // 2)
+                + "Game Beaten"
+                + " " * ((max(self.width - 11, 0) // 2) + 1)
+            )
+            print("\n" * ((len(self.board) // 2) - 1))
+            time.sleep(3)
+            self.gameover = True
 
     def handleInput(self, keys):
         if self.imobolized == 0 and self.jump == 0 and self.falling == 0:
@@ -92,7 +110,7 @@ class Game:
         print(f"\033[{len(self.board) + 1}A", end="", flush=True)
         for line in self.board[::-1]:
             print("".join(line))
-        print(str(self.lives) + " " * 40 + str(self.level))
+        print(str(self.lives) + " " * (self.width - 3) + str(self.level))
 
     def makeHole(self, posNum):
         posNum %= self.platformMax
@@ -106,12 +124,19 @@ class Game:
             self.x %= self.width
             self.y += y
         else:
-            self.imobolized = 11
+            self.imobolized = self.downtime
             self.jump = 0
 
     def gameOver(self):
         self.gameover = True
-        print("game over")
+        print(f"\033[{len(self.board) // 2 + 1}A", end="", flush=True)
+        print(
+            " " * (max(self.width - 11, 0) // 2)
+            + "Game Over"
+            + " " * ((max(self.width - 11, 0) // 2) + 1)
+        )
+        print("\n" * ((len(self.board) // 2) - 1))
+        time.sleep(3)
 
     def fall(self):
         if self.y > 0 and self.jump <= 0:
@@ -125,7 +150,7 @@ class Game:
         else:
             if self.falling > 0:
                 self.lives -= 1
-                self.imobolized = 10
+                self.imobolized = self.downtime
                 if self.lives == 0:
                     self.gameOver()
                 self.falling = 0
@@ -175,7 +200,9 @@ def generate_random_list():
     numbers = []
     total = 0
     while True:
-        n = random.randint(5, 70)
+        n = random.choices(range(5, 71), weights=[(i - 4) for i in range(5, 71)], k=1)[
+            0
+        ]
         if total + n >= 60 * 8:
             break
         numbers.append(n)
