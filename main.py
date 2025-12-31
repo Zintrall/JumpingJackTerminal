@@ -42,6 +42,8 @@ def get_keys():
 
 class Game:
     def __init__(self, arrayHolesTop, arrayHolesBottom):
+        self.time_holes = 300
+        self.downtime = self.time_holes * 7
         self.board = []
         self.width = 60
         self.platformMax = self.width * 8
@@ -51,8 +53,6 @@ class Game:
         self.arrayHolesTop = arrayHolesTop
         self.arrayHolesBottom = arrayHolesBottom
         self.level = 0
-        self.downtime = 3000
-        self.time_holes = 500
         self.current_time = 0
         self.fall_time = 0
         self.lastInput = 0
