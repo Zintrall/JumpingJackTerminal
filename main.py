@@ -42,7 +42,7 @@ def get_keys():
 
 class Game:
     def __init__(self, arrayHolesTop, arrayHolesBottom):
-        self.time_holes = 300
+        self.time_holes = 200
         self.downtime = self.time_holes * 7
         self.board = []
         self.width = 60
@@ -66,7 +66,7 @@ class Game:
         self.jump_time = 0
         self.falling = 0
         self.imobolized = 0
-        self.x = 25
+        self.x = self.width // 2
         self.y = 0
         self.tickNum = 0
 
@@ -117,7 +117,7 @@ class Game:
         print(f"\033[{len(self.board) + 1}A", end="", flush=True)
         for line in self.board[::-1]:
             print("".join(line))
-        print(str(self.lives) + " " * (self.width - 3) + str(self.level))
+        print(str(self.lives) + " " * (self.width - 3) + str(self.level + 1))
 
     def makeHole(self, posNum):
         posNum %= self.platformMax
