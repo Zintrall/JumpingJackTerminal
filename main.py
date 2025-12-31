@@ -51,14 +51,19 @@ class Game:
         self.arrayHolesTop = arrayHolesTop
         self.arrayHolesBottom = arrayHolesBottom
         self.level = 0
-        self.lastkeys = []
-        self.downtime = 16
+        self.downtime = 3000
+        self.time_holes = 500
+        self.current_time = 0
+        self.fall_time = 0
+        self.lastInput = 0
+        self.lastKeys = []
         self.nextLevel()
 
     def nextLevel(self):
         self.holesTop = self.arrayHolesTop[self.level]
         self.holesBottom = self.arrayHolesBottom[self.level]
         self.jump = 0
+        self.jump_time = 0
         self.falling = 0
         self.imobolized = 0
         self.x = 25
@@ -91,20 +96,22 @@ class Game:
     def handleInput(self, keys):
         if self.imobolized == 0 and self.jump == 0 and self.falling == 0:
             if " " in keys:
-                self.jump = 4
-                self.lastkeys = []
-            elif ("a" in keys and self.tickNum % 2) or (
-                "a" in self.lastkeys and not self.tickNum % 2
-            ):
-                self.movePlayer(-1, 0)
-                self.lastkeys = []
-            elif ("d" in keys and self.tickNum % 2) or (
-                "a" in self.lastkeys and not self.tickNum % 2
-            ):
-                self.movePlayer(1, 0)
-                self.lastkeys = []
-            elif not self.tickNum % 2:
-                self.lastkeys = keys
+                self.jump = 5
+                self.jump_time = self.current_time
+            elif self.lastInput + self.time_holes > self.current_time:
+                if keys != []:
+                    self.lastKeys = keys
+            else:
+                if self.lastKeys != []:
+                    if keys == []:
+                        keys = self.lastKeys
+                    self.lastKeys = []
+                if "a" in keys:
+                    self.lastInput = self.current_time
+                    self.movePlayer(-1, 0)
+                elif "d" in keys:
+                    self.lastInput = self.current_time
+                    self.movePlayer(1, 0)
 
     def printBoard(self):
         print(f"\033[{len(self.board) + 1}A", end="", flush=True)
@@ -124,7 +131,7 @@ class Game:
             self.x %= self.width
             self.y += y
         else:
-            self.imobolized = self.downtime
+            self.imobolized = self.current_time
             self.jump = 0
 
     def gameOver(self):
@@ -139,37 +146,42 @@ class Game:
         time.sleep(3)
 
     def fall(self):
-        if self.y > 0 and self.jump <= 0:
-            if self.board[self.y - 1][self.x] == " ":
-                self.falling += 1
-                self.movePlayer(0, -1)
+        if self.current_time > self.fall_time + self.time_holes / 2:
+            if self.y > 0 and self.jump <= 0:
+                if self.board[self.y - 1][self.x] == " ":
+                    self.falling += 1
+                    self.movePlayer(0, -1)
+                    self.fall_time = self.current_time
+                else:
+                    if self.falling > 1:
+                        self.imobolized = self.current_time
+                    self.falling = 0
             else:
-                if self.falling > 1:
-                    self.imobolized = 5
-                self.falling = 0
-        else:
-            if self.falling > 0:
-                self.lives -= 1
-                self.imobolized = self.downtime
-                if self.lives == 0:
-                    self.gameOver()
-                self.falling = 0
+                if self.falling > 0:
+                    self.lives -= 1
+                    self.imobolized = self.current_time
+                    if self.lives == 0:
+                        self.gameOver()
+                    self.falling = 0
 
     def tick(self, keys):
+        self.current_time = int(time.time() * 1000)
         if self.gameover:
             return
+
+        if self.current_time > self.imobolized + self.downtime:
+            self.imobolized = 0
+
         self.board = [
             ["¯"] * self.width if i % 3 == 2 else [" "] * self.width for i in range(24)
         ]
-        if self.imobolized > 0:
-            self.imobolized -= 1
         # Make holes
-        curpos = self.tickNum // 2
+        curpos = (self.current_time // self.time_holes) % self.platformMax
         for i in self.holesBottom:
             curpos += i
             self.makeHole(curpos)
             self.makeHole(curpos + 1)
-        curpos = -self.tickNum // 2
+        curpos = (-self.current_time // self.time_holes) % self.platformMax
         for i in self.holesTop:
             curpos += i
             self.makeHole(curpos)
@@ -182,18 +194,21 @@ class Game:
         self.handleInput(keys)
 
         # Handle jump
-        if self.jump > 0:
-            self.jump -= 1
-            self.movePlayer(0, 1)
+        if (
+            self.jump_time + ((self.time_holes / 2) * (6 - self.jump))
+            < self.current_time
+        ):
+            if self.jump > 0:
+                if self.jump == 1:
+                    self.jump = 0
+                else:
+                    self.jump -= 1
+                    self.movePlayer(0, 1)
 
         self.board[self.y][self.x] = "@" if self.imobolized == 0 else "X"
 
         self.printBoard()
-
-        self.tickNum += 1
-        self.tickNum %= self.tickOverFlow
-
-        time.sleep(0.2)
+        time.sleep(0.01)
 
 
 def generate_random_list():
